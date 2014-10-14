@@ -30,6 +30,16 @@ type Task struct {
 	Expires time.Time
 }
 
+type FormattedTask struct {
+	Task    string                 `json:"task"`
+	Id      string                 `json:"id"`
+	Args    []string               `json:"args,omitempty"`
+	KWArgs  map[string]interface{} `json:"kwargs,omitempty"`
+	Retries int                    `json:"retries,omitempty"`
+	ETA     string                 `json:"eta,omitempty"`
+	Expires string                 `json:"expires,omitempty"`
+}
+
 const timeFormat = "2006-01-02T15:04:05.999999"
 
 // Returns a pointer to a new task object
@@ -52,15 +62,6 @@ func NewTask(task string, args []string, kwargs map[string]interface{}) (*Task, 
 // Marshals a Task object into JSON bytes array,
 // time objects are converted to UTC and formatted in ISO8601
 func (t *Task) MarshalJSON() ([]byte, error) {
-	type FormattedTask struct {
-		Task    string                 `json:"task"`
-		Id      string                 `json:"id"`
-		Args    []string               `json:"args,omitempty"`
-		KWArgs  map[string]interface{} `json:"kwargs,omitempty"`
-		Retries int                    `json:"retries,omitempty"`
-		ETA     string                 `json:"eta,omitempty"`
-		Expires string                 `json:"expires,omitempty"`
-	}
 
 	out := FormattedTask{
 		Task:    t.Task,
@@ -79,6 +80,21 @@ func (t *Task) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(out)
+}
+
+func (t *Task) UnmarshalJSON(data []byte) error {
+	task := FormattedTask{}
+	err := json.Unmarshal(data, &task)
+
+	t.Task = task.Task
+	t.Id = task.Id
+	t.Args = task.Args
+	t.KWArgs = task.KWArgs
+	t.Retries = task.Retries
+	t.ETA, err = time.Parse(timeFormat, task.ETA)
+	t.Expires, err = time.Parse(timeFormat, task.Expires)
+
+	return err
 }
 
 // Publish a task to an AMQP channel,

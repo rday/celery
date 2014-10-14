@@ -53,6 +53,27 @@ func TestNewTask(t *testing.T) {
 	}
 }
 
+func TestUnmarshalJson(t *testing.T) {
+	json := []byte("{\"expires\": \"2014-01-01T12:34:56\", \"utc\": true, \"args\": [], \"chord\": null, \"callbacks\": null, \"errbacks\": null, \"taskset\": null, \"id\": \"123abc\", \"retries\": 0, \"task\": \"Task Name\", \"timelimit\": [null, null], \"eta\": null, \"kwargs\": {}}")
+
+	x := &Task{}
+	x.UnmarshalJSON(json)
+
+	if x.Task != "Task Name" {
+		t.Fail()
+	}
+
+	emptyTime, _ := time.Parse(timeFormat, "")
+	if !emptyTime.Equal(x.ETA) {
+		t.Fail()
+	}
+
+	expectedExpire, _ := time.Parse(timeFormat, "2014-01-01T12:34:56")
+	if !expectedExpire.Equal(x.Expires) {
+		t.Fail()
+	}
+}
+
 func TestMarshalJson(t *testing.T) {
 	x, err := NewTask("task name", nil, nil)
 	if err != nil {
