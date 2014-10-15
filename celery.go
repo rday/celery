@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"github.com/nu7hatch/gouuid"
 	"github.com/streadway/amqp"
+	"log"
 	"time"
 )
 
@@ -115,4 +116,26 @@ func (t *Task) Publish(ch *amqp.Channel, exchange, key string) error {
 	}
 
 	return ch.Publish(exchange, key, false, false, msg)
+}
+
+func Consume(ch *amqp.Channel, queue, exchange, key string, messages chan<- Task) error {
+	if err := ch.QueueBind(queue, key, exchange, false, nil); err != nil {
+		log.Printf("Failed: %v", err)
+		return err
+	}
+
+	deliveries, err := ch.Consume(queue, "", false, true, false, false, nil)
+	if err != nil {
+		log.Printf("Failed: %v", err)
+		return err
+	}
+
+	for msg := range deliveries {
+		task := &Task{}
+		task.UnmarshalJSON(msg.Body)
+		messages <- *task
+		ch.Ack(msg.DeliveryTag, false)
+	}
+
+	return nil
 }
